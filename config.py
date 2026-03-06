@@ -5,33 +5,34 @@ TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "7445971784")
 
 # Concurrents directs (chaines FR dev perso / motivation / mindset)
+# Format: nom -> handle YouTube (sans @) OU channel ID (UC...)
 COMPETITORS = {
-    "David Laroche": "UCDz1naOEbcMak8s8_xO8DJg",
-    "Franck Nicolas": "UC4Jd9BKlnEORSXKwsCNJcfg",
-    "Emilio": "UC0-KaiZFXaPlcGFNuX1B4nQ",
-    "S'enrichir": "UCYzMYq_jlTm3KxYbEB9bFZw",
-    "Mylene Muller": "UC1tbpKQPikainYPlnrt_HLXQ",
-    "Jean Laval": "UCa7JA7kiNY31NnCXzCLHGYw",
-    "Yomi Denzel": "UCkGwDJDsKMq4DZlSvpSNYnA",
-    "Les Sherpas": "UCzN5iJg17EDiV1qIuZMiYRg",
-    "Motivation du Jour": "UCOxcT3Kj80dqmCGxvgkSFTw",
-    "Mental Puissant": "UCL8fKxLEPlBHG3-nEvyJgJQ",
+    "David Laroche": "@davidlaraborche",
+    "Franck Nicolas": "UCOPYmqe_bNzjYErvNEGJ5og",
+    "Emilio": "@EmilioSpeaks",
+    "Jean Laval": "@jeanlaval",
+    "Yomi Denzel": "UChgE6R4QauGAJAlYiJOcCGw",
+    "Les Sherpas": "@les_sherpas",
+    "Pensees Profondes": "@PenseesProfondes",
+    "Motivation du Jour": "@MotivationduJourOfficiel",
+    "the Stoic Mode": "@theStoicMode",
+    "Mental Puissant": "@MentalPuissant",
 }
 
 # Mots-cles de recherche pour la niche
 SEARCH_QUERIES = [
-    "développement personnel",
+    "développement personnel français",
     "motivation française",
-    "confiance en soi",
-    "discipline habitudes",
+    "confiance en soi français",
+    "discipline habitudes français",
     "mentalité de guerrier",
     "mindset entrepreneur français",
-    "changer de vie motivation",
+    "changer de vie motivation français",
     "routine du matin productivité",
     "force mentale résilience",
     "dépassement de soi",
     "stoïcisme français",
-    "devenir meilleur version",
+    "devenir meilleur version de soi",
 ]
 
 # Nombre de resultats par requete

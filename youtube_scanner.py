@@ -20,6 +20,46 @@ def get_youtube_client():
     return build("youtube", "v3", developerKey=YOUTUBE_API_KEY)
 
 
+# ── Resolution des handles ───────────────────────────────────────────────
+
+
+def resolve_competitor_ids(youtube) -> dict[str, str]:
+    """Resout les handles (@xxx) en channel IDs. Retourne {nom: channel_id}."""
+    resolved = {}
+    for name, identifier in COMPETITORS.items():
+        if identifier.startswith("UC") and len(identifier) == 24:
+            resolved[name] = identifier
+            continue
+        # Handle format: @handle -> search via channels().list(forHandle=...)
+        handle = identifier.lstrip("@")
+        try:
+            resp = (
+                youtube.channels()
+                .list(part="id", forHandle=handle)
+                .execute()
+            )
+            items = resp.get("items", [])
+            if items:
+                resolved[name] = items[0]["id"]
+                log.info("Resolved @%s -> %s", handle, items[0]["id"])
+            else:
+                log.warning("Handle @%s not found, trying search", handle)
+                resp2 = (
+                    youtube.search()
+                    .list(part="snippet", q=handle, type="channel", maxResults=1)
+                    .execute()
+                )
+                items2 = resp2.get("items", [])
+                if items2:
+                    resolved[name] = items2[0]["snippet"]["channelId"]
+                    log.info("Resolved %s via search -> %s", handle, resolved[name])
+                else:
+                    log.warning("Could not resolve %s", name)
+        except Exception as e:
+            log.warning("Error resolving %s: %s", name, e)
+    return resolved
+
+
 # ── Analyse des concurrents ──────────────────────────────────────────────
 
 
@@ -166,13 +206,16 @@ def generate_full_report(days_back: int = 7) -> dict:
     """Genere un rapport de veille complet."""
     youtube = get_youtube_client()
 
-    # 1) Stats des concurrents
-    channel_ids = list(COMPETITORS.values())
-    competitors_stats = fetch_channel_stats(youtube, channel_ids)
+    # 1) Resolve handles -> channel IDs
+    resolved = resolve_competitor_ids(youtube)
+    channel_ids = list(resolved.values())
 
-    # 2) Top videos de chaque concurrent (les 5 dernieres par vues)
+    # 2) Stats des concurrents
+    competitors_stats = fetch_channel_stats(youtube, channel_ids) if channel_ids else []
+
+    # 3) Top videos de chaque concurrent (les 5 dernieres par vues)
     competitors_top = {}
-    for name, ch_id in COMPETITORS.items():
+    for name, ch_id in resolved.items():
         try:
             top = fetch_channel_top_videos(youtube, ch_id, max_results=5)
             competitors_top[name] = top
@@ -180,18 +223,21 @@ def generate_full_report(days_back: int = 7) -> dict:
             log.warning("Erreur top videos %s: %s", name, e)
             competitors_top[name] = []
 
-    # 3) Videos trending dans la niche
+    # 4) Videos trending dans la niche
     trending = search_trending_videos(youtube, days_back=days_back, max_per_query=10)
 
-    # 4) Analyse des tags les plus utilises
+    # 5) Analyse des tags les plus utilises
     tag_count: dict[str, int] = {}
-    for v in trending:
+    all_videos = trending[:]
+    for vids in competitors_top.values():
+        all_videos.extend(vids)
+    for v in all_videos:
         for tag in v.get("tags", []):
             t = tag.lower().strip()
             tag_count[t] = tag_count.get(t, 0) + 1
     top_tags = sorted(tag_count.items(), key=lambda x: x[1], reverse=True)[:30]
 
-    # 5) Meilleurs titres (top 20 par vues)
+    # 6) Meilleurs titres (top 20 par vues)
     best_titles = [
         {"title": v["title"], "views": v["views"], "channel": v["channel"], "url": v["url"]}
         for v in trending[:20]
