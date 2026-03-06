@@ -66,10 +66,14 @@ def health():
 @app.route("/api/veille", methods=["POST"])
 def trigger_veille():
     """Declenche une veille manuellement."""
-    days = request.json.get("days_back", 7) if request.is_json else 7
-    notify = request.json.get("notify", True) if request.is_json else True
-    report = run_veille(days_back=days, notify=notify)
-    return jsonify({"status": "ok", "videos_found": report["total_videos_scanned"]})
+    try:
+        days = request.json.get("days_back", 7) if request.is_json else 7
+        notify = request.json.get("notify", True) if request.is_json else True
+        report = run_veille(days_back=days, notify=notify)
+        return jsonify({"status": "ok", "videos_found": report["total_videos_scanned"]})
+    except Exception as e:
+        log.error("Erreur veille API: %s", e, exc_info=True)
+        return jsonify({"status": "error", "error": str(e)}), 500
 
 
 @app.route("/api/report")

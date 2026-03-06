@@ -206,16 +206,13 @@ def generate_full_report(days_back: int = 7) -> dict:
     """Genere un rapport de veille complet."""
     youtube = get_youtube_client()
 
-    # 1) Resolve handles -> channel IDs
-    resolved = resolve_competitor_ids(youtube)
-    channel_ids = list(resolved.values())
-
-    # 2) Stats des concurrents
+    # 1) Stats des concurrents (IDs directs depuis config)
+    channel_ids = list(COMPETITORS.values())
     competitors_stats = fetch_channel_stats(youtube, channel_ids) if channel_ids else []
 
-    # 3) Top videos de chaque concurrent (les 5 dernieres par vues)
+    # 2) Top videos de chaque concurrent (les 5 dernieres par vues)
     competitors_top = {}
-    for name, ch_id in resolved.items():
+    for name, ch_id in COMPETITORS.items():
         try:
             top = fetch_channel_top_videos(youtube, ch_id, max_results=5)
             competitors_top[name] = top

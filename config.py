@@ -5,18 +5,16 @@ TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "7445971784")
 
 # Concurrents directs (chaines FR dev perso / motivation / mindset)
-# Format: nom -> handle YouTube (sans @) OU channel ID (UC...)
+# Tous en channel ID (UC...) pour economiser le quota API
 COMPETITORS = {
-    "David Laroche": "@davidlaraborche",
-    "Franck Nicolas": "UCOPYmqe_bNzjYErvNEGJ5og",
-    "Emilio": "@EmilioSpeaks",
-    "Jean Laval": "@jeanlaval",
     "Yomi Denzel": "UChgE6R4QauGAJAlYiJOcCGw",
-    "Les Sherpas": "@les_sherpas",
-    "Pensees Profondes": "@PenseesProfondes",
-    "Motivation du Jour": "@MotivationduJourOfficiel",
-    "the Stoic Mode": "@theStoicMode",
-    "Mental Puissant": "@MentalPuissant",
+    "Franck Nicolas": "UCOPYmqe_bNzjYErvNEGJ5og",
+    "Jean Laval": "UC8JMj6-MQMjMhSCxwbMuvPw",
+    "Les Sherpas": "UCzk9CKiC5wJrjpzGCfjqIkA",
+    "the Stoic Mode": "UCqr2baNgRH9zCKRnb5dLqOA",
+    "Pensees Profondes": "UC_PejHrGWKhMX7j-5KBluig",
+    "David Laroche": "UCLkP4EU7PLrXnU1cElbYIZA",
+    "Oussama Ammar": "UCMrdp10ltViJeGq2T0bGmsg",
 }
 
 # Mots-cles de recherche pour la niche
