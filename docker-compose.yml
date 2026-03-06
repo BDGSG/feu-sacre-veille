@@ -1,0 +1,19 @@
+services:
+  feu-sacre-veille:
+    build: .
+    container_name: feu-sacre-veille
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - YOUTUBE_API_KEY=${YOUTUBE_API_KEY}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID:-7445971784}
+      - PORT=3000
+      - TZ=Europe/Paris
+      - PYTHONIOENCODING=utf-8
+    volumes:
+      - veille-data:/data
+
+volumes:
+  veille-data:
