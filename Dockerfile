@@ -11,4 +11,4 @@ RUN mkdir -p /data/reports
 
 EXPOSE 3000
 
-CMD ["gunicorn", "--bind", "0.0.0.0:3000", "--workers", "2", "--timeout", "120", "app:app"]
+CMD ["gunicorn", "--bind", "0.0.0.0:3000", "--workers", "1", "--threads", "4", "--timeout", "120", "--preload", "app:app"]
