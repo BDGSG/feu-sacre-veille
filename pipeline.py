@@ -68,7 +68,7 @@ def run_full_pipeline(
 
         # ── Step 2: Script Generation ─────────────────────────────────
         log.info("Step 2/7: Generating script from veille data...")
-        sections = generate_script_from_veille(report)
+        sections = generate_script_from_veille(report, video_type=video_type)
         metadata = generate_title_and_metadata(sections, report)
 
         total_words = sum(len(s["narration"].split()) for s in sections)

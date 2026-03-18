@@ -12,7 +12,7 @@ from config import GROQ_API_KEY, GROQ_MODEL, SCRIPT_SECTIONS_COUNT, SCRIPT_WORDS
 
 log = logging.getLogger(__name__)
 
-SYSTEM_PROMPT = """Tu es le scriptwriter de la chaine YouTube "Feu Sacre".
+SYSTEM_PROMPT_LONG = """Tu es le scriptwriter de la chaine YouTube "Feu Sacre".
 La chaine produit des videos de developpement personnel, motivation et mindset
 avec une esthetique dark anime / guerrier / phoenix.
 
@@ -23,7 +23,7 @@ Ton style:
 - References au stoicisme, a la discipline, au depassement de soi
 - Pas de jargon corporate, pas de positivite toxique, du vrai
 
-Structure d'une video (~{words} mots total, {sections} sections):
+Structure d'une video LONGUE (~{words} mots total, {sections} sections):
 1. HOOK (pas de titre) - accroche choc, stat ou question provocante
 2-6. PHASES numerotees avec titres epiques (ex: "PHASE 1: TUE TON CONFORT")
 7. CTA (pas de titre) - appel a l'action, abonnement, commentaire
@@ -37,6 +37,31 @@ Chaque section doit avoir:
 
 IMPORTANT: Reponds UNIQUEMENT en JSON valide, sans texte avant ou apres.
 """.format(words=SCRIPT_WORDS_TARGET, sections=SCRIPT_SECTIONS_COUNT)
+
+SYSTEM_PROMPT_SHORT = """Tu es le scriptwriter de la chaine YouTube "Feu Sacre".
+La chaine produit des YouTube SHORTS (format vertical 9:16, MAX 55 SECONDES).
+
+Ton style:
+- Phrases ultra-courtes et percutantes
+- Metaphores martiales (Spartiates, Samourai, Phoenix, forge, feu)
+- Tutoiement, ton direct et visceral
+- Maximum d'impact en minimum de mots
+
+Structure d'un SHORT (~80 mots MAXIMUM, 3 sections):
+1. HOOK (pas de titre) - accroche choc en 1-2 phrases (10-15 mots)
+2. CONTENU (titre court) - le message principal (40-50 mots)
+3. CTA (pas de titre) - "Le feu sacre ne s'eteint jamais. Abonne-toi." (10-15 mots)
+
+IMPORTANT: Le short DOIT faire MOINS DE 80 MOTS au total pour tenir en 55 secondes.
+Chaque section doit avoir:
+- "titre": titre (vide pour hook et CTA)
+- "narration": le texte COURT
+- "images": 1 seul prompt image par section (3 images total)
+  Format image: description visuelle en anglais pour FLUX.1
+  Style: dark anime, hooded warrior, glowing orange eyes, fire embers, 9:16 vertical
+
+IMPORTANT: Reponds UNIQUEMENT en JSON valide, sans texte avant ou apres.
+"""
 
 
 def _call_llm(messages: list[dict], temperature: float = 0.8) -> str:
@@ -177,14 +202,35 @@ def _extract_insights(report: dict) -> str:
     return "\n\n".join(insights) if insights else "Pas de donnees de veille disponibles."
 
 
-def generate_script_from_veille(report: dict) -> list[dict]:
+def generate_script_from_veille(report: dict, video_type: str = "long") -> list[dict]:
     """
     Generate a complete video script based on veille intelligence.
     Returns list of sections with titre, narration, images.
+    video_type: "long" (7 sections, ~2500 mots) or "short" (3 sections, ~80 mots, <60s)
     """
     insights = _extract_insights(report)
+    is_short = video_type == "short"
 
-    user_prompt = f"""Voici les resultats de la veille concurrentielle de cette semaine:
+    if is_short:
+        user_prompt = f"""Voici les resultats de la veille concurrentielle:
+
+{insights}
+
+Genere un script YouTube SHORT (MAX 55 SECONDES = ~80 mots) pour Feu Sacre:
+1. HOOK: 1-2 phrases choc (10-15 mots)
+2. CONTENU: message principal ultra-percutant (40-50 mots)
+3. CTA: appel a l'action court (10-15 mots)
+
+RAPPEL: 80 MOTS MAXIMUM au total. 3 sections. 1 image par section.
+
+Format JSON:
+[
+  {{"titre": "", "narration": "hook...", "images": ["prompt1"]}},
+  {{"titre": "TITRE COURT", "narration": "contenu...", "images": ["prompt2"]}},
+  {{"titre": "", "narration": "cta...", "images": ["prompt3"]}}
+]"""
+    else:
+        user_prompt = f"""Voici les resultats de la veille concurrentielle de cette semaine:
 
 {insights}
 
@@ -209,8 +255,9 @@ Format de reponse (JSON array):
   ...
 ]"""
 
+    system_prompt = SYSTEM_PROMPT_SHORT if is_short else SYSTEM_PROMPT_LONG
     messages = [
-        {"role": "system", "content": SYSTEM_PROMPT},
+        {"role": "system", "content": system_prompt},
         {"role": "user", "content": user_prompt},
     ]
 
