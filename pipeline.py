@@ -9,7 +9,7 @@ import os
 import tempfile
 from datetime import datetime, timezone, timedelta
 
-from config import SCRIPT_SECTIONS_COUNT
+from config import SCRIPT_SECTIONS_COUNT, DATA_DIR
 
 log = logging.getLogger(__name__)
 
@@ -132,10 +132,10 @@ def run_full_pipeline(
 
         # ── Step 6: Final Assembly ────────────────────────────────────
         log.info("Step 6/7: Assembling final video...")
-        os.makedirs("/data/videos", exist_ok=True)
+        os.makedirs(os.path.join(DATA_DIR, "videos"), exist_ok=True)
         timestamp = pipeline_start.strftime("%Y%m%d_%H%M")
         filename = f"feu_sacre_{video_type}_{timestamp}.mp4"
-        output_path = f"/data/videos/{filename}"
+        output_path = os.path.join(DATA_DIR, "videos", filename)
 
         final_duration = concatenate_segments(segment_paths, output_path)
         file_size_mb = round(os.path.getsize(output_path) / (1024 * 1024), 1)
@@ -262,8 +262,8 @@ def run_veille_and_adapt(days_back: int = 7, notify: bool = True) -> dict:
     report = generate_full_report(days_back=days_back)
 
     # Save report locally
-    os.makedirs("/data/reports", exist_ok=True)
-    filename = f"/data/reports/veille_{report['generated_at'][:10]}.json"
+    os.makedirs(os.path.join(DATA_DIR, "reports"), exist_ok=True)
+    filename = os.path.join(DATA_DIR, "reports", f"veille_{report['generated_at'][:10]}.json")
     with open(filename, "w", encoding="utf-8") as f:
         json.dump(report, f, ensure_ascii=False, indent=2)
 

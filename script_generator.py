@@ -8,7 +8,7 @@ import json
 import logging
 import urllib.request
 
-from config import GROQ_API_KEY, GROQ_MODEL, SCRIPT_SECTIONS_COUNT, SCRIPT_WORDS_TARGET
+from config import GROQ_API_KEY, GROQ_MODEL, SCRIPT_SECTIONS_COUNT, SCRIPT_WORDS_TARGET, ANTHROPIC_API_KEY, HF_TOKEN
 
 log = logging.getLogger(__name__)
 
@@ -39,11 +39,36 @@ IMPORTANT: Reponds UNIQUEMENT en JSON valide, sans texte avant ou apres.
 """.format(words=SCRIPT_WORDS_TARGET, sections=SCRIPT_SECTIONS_COUNT)
 
 
+def _call_llm(messages: list[dict], temperature: float = 0.8) -> str:
+    """Call LLM API. Tries Groq -> Anthropic -> HuggingFace."""
+    errors = []
+
+    if GROQ_API_KEY:
+        try:
+            return _call_groq(messages, temperature)
+        except Exception as e:
+            errors.append(f"Groq: {e}")
+            log.warning("Groq failed (%s)", e)
+
+    if ANTHROPIC_API_KEY:
+        try:
+            return _call_anthropic(messages, temperature)
+        except Exception as e:
+            errors.append(f"Anthropic: {e}")
+            log.warning("Anthropic failed (%s)", e)
+
+    if HF_TOKEN:
+        try:
+            return _call_huggingface(messages, temperature)
+        except Exception as e:
+            errors.append(f"HuggingFace: {e}")
+            log.warning("HuggingFace failed (%s)", e)
+
+    raise ValueError(f"All LLM APIs failed: {'; '.join(errors)}")
+
+
 def _call_groq(messages: list[dict], temperature: float = 0.8) -> str:
     """Call Groq LLM API."""
-    if not GROQ_API_KEY:
-        raise ValueError("GROQ_API_KEY not set")
-
     url = "https://api.groq.com/openai/v1/chat/completions"
     headers = {
         "Authorization": f"Bearer {GROQ_API_KEY}",
@@ -58,6 +83,58 @@ def _call_groq(messages: list[dict], temperature: float = 0.8) -> str:
 
     req = urllib.request.Request(url, data=payload, headers=headers, method="POST")
     with urllib.request.urlopen(req, timeout=120) as resp:
+        result = json.loads(resp.read().decode("utf-8"))
+        return result["choices"][0]["message"]["content"]
+
+
+def _call_anthropic(messages: list[dict], temperature: float = 0.8) -> str:
+    """Call Anthropic Claude API."""
+    url = "https://api.anthropic.com/v1/messages"
+
+    # Convert messages format: extract system prompt
+    system = ""
+    user_messages = []
+    for m in messages:
+        if m["role"] == "system":
+            system = m["content"]
+        else:
+            user_messages.append(m)
+
+    headers = {
+        "x-api-key": ANTHROPIC_API_KEY,
+        "anthropic-version": "2023-06-01",
+        "Content-Type": "application/json",
+    }
+    payload = json.dumps({
+        "model": "claude-sonnet-4-20250514",
+        "max_tokens": 8000,
+        "temperature": temperature,
+        "system": system,
+        "messages": user_messages,
+    }).encode("utf-8")
+
+    req = urllib.request.Request(url, data=payload, headers=headers, method="POST")
+    with urllib.request.urlopen(req, timeout=120) as resp:
+        result = json.loads(resp.read().decode("utf-8"))
+        return result["content"][0]["text"]
+
+
+def _call_huggingface(messages: list[dict], temperature: float = 0.8) -> str:
+    """Call HuggingFace Inference API (DeepSeek V3 via Novita)."""
+    url = "https://router.huggingface.co/novita/v3/openai/chat/completions"
+    headers = {
+        "Authorization": f"Bearer {HF_TOKEN}",
+        "Content-Type": "application/json",
+    }
+    payload = json.dumps({
+        "model": "deepseek/deepseek-v3-0324",
+        "messages": messages,
+        "temperature": temperature,
+        "max_tokens": 8000,
+    }).encode("utf-8")
+
+    req = urllib.request.Request(url, data=payload, headers=headers, method="POST")
+    with urllib.request.urlopen(req, timeout=180) as resp:
         result = json.loads(resp.read().decode("utf-8"))
         return result["choices"][0]["message"]["content"]
 
@@ -138,7 +215,7 @@ Format de reponse (JSON array):
     ]
 
     log.info("Generating script from veille insights...")
-    raw = _call_groq(messages, temperature=0.85)
+    raw = _call_llm(messages, temperature=0.85)
 
     # Parse JSON from response (handle markdown code blocks)
     raw = raw.strip()
@@ -152,7 +229,7 @@ Format de reponse (JSON array):
 
     sections = json.loads(raw)
 
-    # Validate structure
+    # Validate structure and fix grammar
     for i, sec in enumerate(sections):
         if "narration" not in sec:
             raise ValueError(f"Section {i} missing 'narration'")
@@ -160,6 +237,8 @@ Format de reponse (JSON array):
             sec["images"] = []
         if "titre" not in sec:
             sec["titre"] = ""
+        # Fix common LLM grammar errors in French
+        sec["narration"] = _fix_french_grammar(sec["narration"])
 
     total_words = sum(len(s["narration"].split()) for s in sections)
     total_images = sum(len(s["images"]) for s in sections)
@@ -191,7 +270,7 @@ Genere en JSON:
         {"role": "user", "content": prompt},
     ]
 
-    raw = _call_groq(messages, temperature=0.7)
+    raw = _call_llm(messages, temperature=0.7)
     raw = raw.strip()
     if raw.startswith("```"):
         raw = raw.split("\n", 1)[1] if "\n" in raw else raw[3:]
@@ -204,6 +283,49 @@ Genere en JSON:
     metadata = json.loads(raw)
     log.info("Metadata generated: '%s'", metadata.get("title", "?"))
     return metadata
+
+
+def _fix_french_grammar(text: str) -> str:
+    """Fix common French grammar errors that LLMs make."""
+    import re
+
+    # Feminine nouns that LLMs often pair with masculine determiners
+    feminine_nouns = [
+        'procrastination', 'motivation', 'méditation', 'meditation',
+        'passion', 'mission', 'vision', 'ambition', 'discipline',
+        'résilience', 'resilience', 'confiance', 'conscience',
+        'existence', 'résistance', 'persévérance', 'excellence',
+        'faiblesse', 'puissance', 'force', 'vie', 'mort', 'peur',
+        'douleur', 'flamme', 'âme', 'lame', 'voix', 'nuit',
+        'limite', 'bataille', 'victoire', 'défaite', 'fierté',
+        'liberté', 'volonté', 'destinée', 'chute', 'renaissance',
+        'destruction', 'transformation', 'évolution', 'révolution',
+        'détermination', 'obsession', 'addiction', 'habitude',
+        'routine', 'souffrance', 'endurance', 'rage', 'fureur',
+        'gloire', 'honte', 'colère', 'paix', 'guerre', 'quête',
+    ]
+
+    for noun in feminine_nouns:
+        # Skip vowel-initial nouns (elision rules: "ton ambition" is correct)
+        if noun[0] in 'aeiouyàâéèêëîïôùûüAEIOUY':
+            continue
+
+        # Possessifs: ton/son/mon -> ta/sa/ma
+        for masc, fem in [('ton', 'ta'), ('Ton', 'Ta'), ('son', 'sa'), ('Son', 'Sa'),
+                          ('mon', 'ma'), ('Mon', 'Ma')]:
+            text = re.sub(rf'\b{masc} {noun}\b', f'{fem} {noun}', text)
+
+        # Articles: le -> la, un -> une
+        for masc, fem in [('le', 'la'), ('Le', 'La'), ('un', 'une'), ('Un', 'Une')]:
+            text = re.sub(rf'\b{masc} {noun}\b', f'{fem} {noun}', text)
+
+        # Tout -> Toute
+        text = re.sub(rf'\b[Tt]out {noun}\b', lambda m: ('T' if m.group()[0] == 'T' else 't') + f'oute {noun}', text)
+
+    # Fix double spaces
+    text = re.sub(r'  +', ' ', text)
+
+    return text
 
 
 def generate_default_script() -> list[dict]:

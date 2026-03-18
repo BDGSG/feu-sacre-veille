@@ -1,5 +1,14 @@
 import os
 
+# Load .env if present
+from dotenv import load_dotenv
+load_dotenv()
+
+# ── Paths ─────────────────────────────────────────────────────────────────
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DATA_DIR = os.getenv("DATA_DIR", os.path.join(BASE_DIR, "data"))
+
 # ── API Keys ──────────────────────────────────────────────────────────────
 
 YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY", "")

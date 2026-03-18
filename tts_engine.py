@@ -11,6 +11,7 @@ import subprocess
 import edge_tts
 
 from config import VOICE, VOICE_RATE, VOICE_PITCH
+from pronunciation import normalize_pronunciation
 
 log = logging.getLogger(__name__)
 
@@ -30,6 +31,9 @@ async def _generate_tts_async(text: str, audio_path: str) -> list[dict]:
     Uses WordBoundary events from edge-tts for perfect sync.
     Falls back to SentenceBoundary + character-weighted split.
     """
+    # Pre-process pronunciation
+    text = normalize_pronunciation(text)
+
     communicate = edge_tts.Communicate(text, VOICE, rate=VOICE_RATE, pitch=VOICE_PITCH)
 
     word_boundaries = []

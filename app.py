@@ -13,7 +13,7 @@ from datetime import datetime, timezone
 from flask import Flask, jsonify, request
 from apscheduler.schedulers.background import BackgroundScheduler
 
-from config import PORT, CRON_HOUR, CRON_MINUTE
+from config import PORT, CRON_HOUR, CRON_MINUTE, DATA_DIR
 from youtube_scanner import generate_full_report
 from notifier import send_telegram, format_report_telegram
 from pipeline import run_veille_and_adapt, run_full_pipeline
@@ -89,8 +89,9 @@ def trigger_veille():
         _latest_report = report
 
         # Persist
-        os.makedirs("/data/reports", exist_ok=True)
-        filename = f"/data/reports/veille_{report['generated_at'][:10]}.json"
+        reports_dir = os.path.join(DATA_DIR, "reports")
+        os.makedirs(reports_dir, exist_ok=True)
+        filename = os.path.join(reports_dir, f"veille_{report['generated_at'][:10]}.json")
         with open(filename, "w", encoding="utf-8") as f:
             json.dump(report, f, ensure_ascii=False, indent=2)
 
