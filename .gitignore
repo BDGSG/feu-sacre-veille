@@ -4,3 +4,7 @@ __pycache__/
 /data/
 *.egg-info/
 .venv/
+output/
+*.mp4
+*.mp3
+*.wav
