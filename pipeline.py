@@ -151,8 +151,32 @@ def run_full_pipeline(
                  filename, file_size_mb,
                  result["steps"]["assembly"]["duration_human"])
 
-        # ── Step 7: Persist + Schedule ────────────────────────────────
-        log.info("Step 7/7: Saving to Supabase + scheduling...")
+        # ── Step 7: Upload to YouTube ────────────────────────────────
+        log.info("Step 7/8: Uploading to YouTube as private...")
+        youtube_result = None
+        try:
+            from youtube_uploader import upload_video
+            youtube_result = upload_video(
+                video_path=output_path,
+                title=metadata.get("title", f"Feu Sacre {video_type}"),
+                description=metadata.get("description", ""),
+                tags=metadata.get("tags", []),
+                video_type=video_type,  # "short" or "long" -> proper categorization
+                privacy="private",
+            )
+            result["steps"]["youtube_upload"] = {
+                "status": "ok",
+                "video_id": youtube_result["video_id"],
+                "url": youtube_result["url"],
+                "type": youtube_result["type"],
+            }
+            log.info("YouTube upload OK: %s (%s)", youtube_result["url"], video_type)
+        except Exception as e:
+            log.error("YouTube upload failed: %s", e)
+            result["steps"]["youtube_upload"] = {"status": "failed", "error": str(e)}
+
+        # ── Step 8: Persist + Schedule ────────────────────────────────
+        log.info("Step 8/8: Saving to Supabase + scheduling...")
 
         # Save script
         narration_full = " ".join(s["narration"] for s in sections)
@@ -205,16 +229,18 @@ def run_full_pipeline(
 
         # Notification
         if notify:
+            yt_url = youtube_result["url"] if youtube_result else "Upload echoue"
+            yt_type = "SHORT" if video_type == "short" else "VIDEO"
             msg = (
-                f"<b>FEU SACRE - VIDEO GENEREE</b>\n\n"
+                f"<b>FEU SACRE - {yt_type} UPLOADEE</b>\n\n"
                 f"<b>{metadata.get('title', 'Nouvelle video')}</b>\n\n"
                 f"Type: {video_type}\n"
                 f"Duree: {result['steps']['assembly']['duration_human']}\n"
                 f"Taille: {file_size_mb} MB\n"
                 f"Images: {sum(len(imgs) for imgs in section_images)}\n"
                 f"Mots: {total_words}\n\n"
-                f"Fichier: {filename}\n"
-                f"Statut: Pret pour upload"
+                f"YouTube: {yt_url}\n"
+                f"Statut: Privee (review avant publication)"
             )
             send_telegram(msg)
 
