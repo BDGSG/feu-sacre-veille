@@ -199,6 +199,24 @@ def _extract_insights(report: dict) -> str:
         if themes:
             insights.append(f"Themes recurrents: {', '.join(list(themes)[:20])}")
 
+    # Thumbnail patterns that work
+    top_thumbs = report.get("top_thumbnails", {})
+    if isinstance(top_thumbs, dict):
+        recs = top_thumbs.get("recommendations", [])
+        if recs:
+            insights.append("Patterns thumbnails/titres qui marchent:\n" +
+                          "\n".join(f"  - {r}" for r in recs))
+        winning = top_thumbs.get("winning_patterns", [])
+        if winning:
+            insights.append("Patterns gagnants (par frequence): " +
+                          ", ".join(f"{p[0]} ({p[1]}x)" for p in winning[:5]))
+
+    # Subtitle style trends
+    sub_insights = report.get("subtitle_insights", {})
+    if isinstance(sub_insights, dict) and sub_insights.get("recommendations"):
+        insights.append("Style sous-titres qui performe:\n" +
+                      "\n".join(f"  - {r}" for r in sub_insights["recommendations"]))
+
     return "\n\n".join(insights) if insights else "Pas de donnees de veille disponibles."
 
 

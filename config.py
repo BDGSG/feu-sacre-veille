@@ -32,21 +32,20 @@ COMPETITORS = {
 }
 
 SEARCH_QUERIES = [
-    "développement personnel français",
-    "motivation française",
-    "confiance en soi français",
-    "discipline habitudes français",
-    "mentalité de guerrier",
-    "mindset entrepreneur français",
-    "changer de vie motivation français",
-    "routine du matin productivité",
-    "force mentale résilience",
-    "dépassement de soi",
-    "stoïcisme français",
-    "devenir meilleur version de soi",
+    "développement personnel motivation français",
+    "discipline stoïcisme mindset français",
+    "confiance en soi force mentale",
+    "mentalité de guerrier dépassement de soi",
+    "changer de vie habitudes français",
+    "routine productivité résilience",
 ]
 
-MAX_RESULTS_PER_QUERY = 20
+MAX_RESULTS_PER_QUERY = 5
+
+# ── Veille Rate Limiting ─────────────────────────────────────────────────
+
+VEILLE_COOLDOWN_HOURS = 20      # min hours between veille runs
+VEILLE_MAX_COMPETITOR_VIDEOS = 3  # top videos per competitor (was 5)
 
 # ── Scheduling ────────────────────────────────────────────────────────────
 
